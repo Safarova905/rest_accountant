@@ -1,8 +1,8 @@
 package servlets;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jdbc.TaskDaoJDBC;
 import models.Task;
-import util.TaskUtils;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -10,42 +10,42 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.sql.SQLException;
+
 
 public class JsonTaskServlet extends HttpServlet {
-    private Map<Integer, Task> tasks;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private TaskDaoJDBC taskDao;
 
     @Override
     public void init() throws ServletException {
 
-        final Object task = getServletContext().getAttribute("tasks");
+        final Object taskDAO = getServletContext().getAttribute("taskDAO");
+        this.taskDao = (TaskDaoJDBC) taskDAO;
 
-        if (!(task instanceof ConcurrentHashMap)) {
-            throw new IllegalStateException("You're repo does not initialize!");
-        } else {
-            this.tasks = (ConcurrentHashMap<Integer, Task>) task;
-        }
     }
 
     @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        req.setCharacterEncoding("UTF-8");
+        request.setCharacterEncoding("UTF-8");
+        final String id = request.getParameter("id");
 
-        final String id = req.getParameter("id");
+        try {
+            Task task = taskDao.findById(Long.parseLong(id)).orElseThrow(SQLException::new);
+            final String jsonTask = objectMapper.writeValueAsString(task);
+            response.setContentType("application/json; charset=UTF-8");
+            PrintWriter out = response.getWriter();
+            out.write(jsonTask);
 
-        if (TaskUtils.idIsInvalid(id, tasks)) {
-            resp.sendRedirect(req.getContextPath() + "/");
-            return;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            response.setContentType("text/HTML; charset=UTF-8");
+            PrintWriter out = response.getWriter();
+            out.write("Не найдено задачи с таким ID");
         }
 
-        final Task task = tasks.get(Integer.parseInt(id));
-        final String jsonTask = new ObjectMapper().writeValueAsString(task);
 
-        resp.setContentType("application/json; charset=UTF-8");
-        PrintWriter out = resp.getWriter();
-        out.write(jsonTask);
     }
 }

@@ -8,11 +8,13 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@JsonPropertyOrder({"id", "title", "description", "date", "tracking"})
+@JsonPropertyOrder({"id", "userId", "description", "date", "hours", "minutes"})
 public class Task {
     private int id;
+    private Integer userId;
     private String title;
     private String description;
     private String date;
-    private int tracking;
+    private Integer hours;
+    private Integer minutes;
 }
